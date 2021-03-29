@@ -8,13 +8,17 @@ const SidebarChat = ({ addNewChat, name, id }) => {
   const [messages, setMessages] = useState([]);
 
   useEffect(() => {
-    db.collection("rooms")
+    const unsubscribe = db
+      .collection("rooms")
       .doc(id)
       .collection("messages")
       .orderBy("timestamp", "desc")
       .onSnapshot((snapshot) =>
         setMessages(snapshot.docs.map((doc) => doc.data()))
       );
+    return () => {
+      unsubscribe();
+    };
   }, [id]);
 
   const createChat = () => {

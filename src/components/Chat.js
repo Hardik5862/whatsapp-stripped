@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useAuthState } from "react-firebase-hooks/auth";
 import firebase from "firebase";
@@ -9,6 +9,7 @@ import Avatar from "@material-ui/core/Avatar";
 import "./Chat.css";
 
 const Chat = () => {
+  const dummy = useRef();
   const { roomId } = useParams();
   const [user] = useAuthState(auth);
   const [roomName, setRoomName] = useState("");
@@ -16,21 +17,29 @@ const Chat = () => {
   const [messages, setMessages] = useState([]);
 
   useEffect(() => {
+    let unsubscribeRooms, unsubscribeMessages;
     if (roomId) {
-      db.collection("rooms")
+      unsubscribeRooms = db
+        .collection("rooms")
         .doc(roomId)
         .onSnapshot((snapshot) => {
           setRoomName(snapshot.data().name);
         });
 
-      db.collection("rooms")
+      unsubscribeMessages = db
+        .collection("rooms")
         .doc(roomId)
         .collection("messages")
         .orderBy("timestamp", "asc")
-        .onSnapshot((snapshot) =>
-          setMessages(snapshot.docs.map((doc) => doc.data()))
-        );
+        .onSnapshot((snapshot) => {
+          setMessages(snapshot.docs.map((doc) => doc.data()));
+          dummy.current.scrollIntoView({ behaviour: "smooth" });
+        });
     }
+    return () => {
+      unsubscribeMessages();
+      unsubscribeRooms();
+    };
   }, [roomId]);
 
   const sendMessage = (e) => {
@@ -43,6 +52,7 @@ const Chat = () => {
         message: message,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       });
+      setMessage("");
     }
   };
 
@@ -77,6 +87,7 @@ const Chat = () => {
               </span>
             </p>
           ))}
+        <div ref={dummy}></div>
       </div>
       <div className="chat__footer">
         <form>
